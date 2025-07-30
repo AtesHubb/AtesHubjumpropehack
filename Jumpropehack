@@ -1,31 +1,33 @@
--- AtesHub GUI - Sağ CTRL + Infinite Money
 local player = game.Players.LocalPlayer
-local mouse = player:GetMouse()
-local runService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
 
-local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+-- ScreenGui
+local gui = Instance.new("ScreenGui")
 gui.Name = "AtesHub"
 gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
 
 -- Frame
-local frame = Instance.new("Frame", gui)
+local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 300, 0, 200)
 frame.Position = UDim2.new(0.5, -150, 0.5, -100)
 frame.AnchorPoint = Vector2.new(0.5, 0.5)
 frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 frame.Visible = false
+frame.Parent = gui
 
 -- Title
-local title = Instance.new("TextLabel", frame)
+local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 30)
 title.BackgroundTransparency = 1
 title.Text = "🔥 AtesHub - Money Module"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 18
+title.Parent = frame
 
 -- Toggle Button
-local toggle = Instance.new("TextButton", frame)
+local toggle = Instance.new("TextButton")
 toggle.Size = UDim2.new(0, 120, 0, 40)
 toggle.Position = UDim2.new(0.5, -60, 0.5, -20)
 toggle.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
@@ -33,8 +35,9 @@ toggle.TextColor3 = Color3.new(1, 1, 1)
 toggle.Text = "Infinite Money: OFF"
 toggle.Font = Enum.Font.Gotham
 toggle.TextSize = 14
+toggle.Parent = frame
 
--- Toggle logic
+-- Toggle Logic
 local isOn = false
 local loopThread = nil
 
@@ -64,10 +67,45 @@ toggle.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Sağ CTRL ile GUI Aç / Kapat
-local UIS = game:GetService("UserInputService")
+-- Sağ CTRL ile GUI aç/kapat
 UIS.InputBegan:Connect(function(input, gameProcessed)
 	if input.KeyCode == Enum.KeyCode.RightControl and not gameProcessed then
 		frame.Visible = not frame.Visible
+	end
+end)
+
+-- GUI Dragging Logic
+local dragging = false
+local dragInput, dragStart, startPos
+
+frame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = frame.Position
+
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+frame.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement then
+		dragInput = input
+	end
+end)
+
+UIS.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		local delta = input.Position - dragStart
+		frame.Position = UDim2.new(
+			startPos.X.Scale,
+			startPos.X.Offset + delta.X,
+			startPos.Y.Scale,
+			startPos.Y.Offset + delta.Y
+		)
 	end
 end)
