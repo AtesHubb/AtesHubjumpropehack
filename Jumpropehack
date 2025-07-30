@@ -1,6 +1,6 @@
 local player = game.Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 -- Ana GUI
 local gui = Instance.new("ScreenGui")
@@ -10,12 +10,14 @@ gui.Parent = player:WaitForChild("PlayerGui")
 
 -- Ana Frame
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 350, 0, 250)
-frame.Position = UDim2.new(0.5, -175, 0.5, -125)
+frame.Size = UDim2.new(0, 350, 0, 260)
+frame.Position = UDim2.new(0.5, -175, 0.5, -130)
 frame.AnchorPoint = Vector2.new(0.5, 0.5)
-frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
-frame.Visible = false
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.Active = true
+frame.Draggable = false -- Draggable ile değil manuel yapacağız
 frame.Parent = gui
+frame.Visible = false
 
 -- Başlık
 local title = Instance.new("TextLabel")
@@ -24,7 +26,7 @@ title.BackgroundTransparency = 1
 title.Text = "🔥 AtesHub"
 title.Font = Enum.Font.GothamBold
 title.TextSize = 24
-title.TextColor3 = Color3.fromRGB(255,255,255)
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Parent = frame
 
 -- Sekme Butonları Çerçevesi
@@ -34,14 +36,21 @@ tabFrame.Position = UDim2.new(0, 0, 0, 40)
 tabFrame.BackgroundTransparency = 1
 tabFrame.Parent = frame
 
+-- UIListLayout ile düzeltilmiş butonlar
+local layout = Instance.new("UIListLayout")
+layout.FillDirection = Enum.FillDirection.Horizontal
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+layout.Padding = UDim.new(0, 5)
+layout.Parent = tabFrame
+
 local tabs = {}
 local tabNames = {"Money", "Speed", "Jump"}
 
 for i, name in ipairs(tabNames) do
 	local btn = Instance.new("TextButton")
 	btn.Name = name .. "Tab"
-	btn.Size = UDim2.new(1/#tabNames, 0, 1, 0)
-	btn.Position = UDim2.new((i-1)/#tabNames, 0, 0, 0)
+	btn.Size = UDim2.new(0, 110, 1, 0)
 	btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 	btn.Text = name
 	btn.Font = Enum.Font.Gotham
@@ -53,32 +62,33 @@ end
 
 -- İçerik container
 local contentFrame = Instance.new("Frame")
-contentFrame.Size = UDim2.new(1, 0, 1, -80)
+contentFrame.Size = UDim2.new(#tabNames, 0, 1, -80) -- Yatay kaydırma için genişlik tab sayısı kadar
 contentFrame.Position = UDim2.new(0, 0, 0, 80)
 contentFrame.BackgroundTransparency = 1
+contentFrame.ClipsDescendants = true
 contentFrame.Parent = frame
 
--- Her sekme için ayrı Frame (sola konumlandırıyoruz animasyon için)
+-- Her sekme için ayrı Frame
 local tabContents = {}
 
 for i, name in ipairs(tabNames) do
 	local f = Instance.new("Frame")
-	f.Size = UDim2.new(1, 0, 1, 0)
+	f.Size = UDim2.new(1 / #tabNames, 0, 1, 0)
 	f.Position = UDim2.new(i - 1, 0, 0, 0)
 	f.BackgroundTransparency = 1
 	f.Parent = contentFrame
 	tabContents[name] = f
 end
 
--- Money Sekmesi içeriği
+-- *** MONEY SEKMESİ ***
 do
 	local f = tabContents["Money"]
-	
+
 	local toggle = Instance.new("TextButton")
 	toggle.Size = UDim2.new(0, 160, 0, 40)
 	toggle.Position = UDim2.new(0.5, -80, 0, 20)
 	toggle.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-	toggle.TextColor3 = Color3.new(1,1,1)
+	toggle.TextColor3 = Color3.new(1, 1, 1)
 	toggle.Text = "Infinite Money: OFF"
 	toggle.Font = Enum.Font.Gotham
 	toggle.TextSize = 14
@@ -114,38 +124,39 @@ do
 	end)
 end
 
--- Speed Sekmesi içeriği
+-- *** SPEED SEKMESİ ***
 do
 	local f = tabContents["Speed"]
-	
+
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.new(1, -20, 0, 20)
 	label.Position = UDim2.new(0, 10, 0, 20)
 	label.BackgroundTransparency = 1
 	label.Text = "Walk Speed: 16"
-	label.TextColor3 = Color3.fromRGB(255,255,255)
+	label.TextColor3 = Color3.fromRGB(255, 255, 255)
 	label.Font = Enum.Font.Gotham
 	label.TextSize = 14
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.Parent = f
-	
+
 	local slider = Instance.new("Frame")
 	slider.Size = UDim2.new(1, -20, 0, 20)
 	slider.Position = UDim2.new(0, 10, 0, 50)
-	slider.BackgroundColor3 = Color3.fromRGB(60,60,60)
+	slider.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 	slider.Parent = f
-	
+
 	local fill = Instance.new("Frame")
 	fill.Size = UDim2.new(0, 50, 1, 0)
-	fill.BackgroundColor3 = Color3.fromRGB(0,170,0)
+	fill.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
 	fill.Parent = slider
-	
+
 	local draggingSlider = false
 	local maxSpeed, minSpeed = 100, 16
 
 	local function updateSpeed(speed)
-		if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
-			player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = speed
+		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			humanoid.WalkSpeed = speed
 		end
 	end
 
@@ -170,47 +181,53 @@ do
 			updateSpeed(speedVal)
 		end
 	end)
-	
+
 	-- Başlangıç hızı ayarla
 	updateSpeed(16)
 end
 
--- Jump Sekmesi içeriği
+-- *** JUMP SEKMESİ ***
 do
 	local f = tabContents["Jump"]
-	
+
 	local toggle = Instance.new("TextButton")
 	toggle.Size = UDim2.new(0, 160, 0, 40)
 	toggle.Position = UDim2.new(0.5, -80, 0, 20)
 	toggle.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-	toggle.TextColor3 = Color3.new(1,1,1)
+	toggle.TextColor3 = Color3.new(1, 1, 1)
 	toggle.Text = "Infinite Jump: OFF"
 	toggle.Font = Enum.Font.Gotham
 	toggle.TextSize = 14
 	toggle.Parent = f
-	
+
 	local infiniteJumpEnabled = false
-	
+
 	local function onJumpRequest()
+		if infiniteJumpEnabled then
+			local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+			end
+		end
+	end
+
+	local jumpConn = UIS.JumpRequest:Connect(function()
 		if infiniteJumpEnabled then
 			local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 			if humanoid and humanoid:GetState() ~= Enum.HumanoidStateType.Freefall then
 				humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
 			end
 		end
-	end
-	
-	UIS.JumpRequest:Connect(onJumpRequest)
-	
+	end)
+
 	toggle.MouseButton1Click:Connect(function()
 		infiniteJumpEnabled = not infiniteJumpEnabled
 		toggle.Text = infiniteJumpEnabled and "Infinite Jump: ON" or "Infinite Jump: OFF"
-		toggle.BackgroundColor3 = infiniteJumpEnabled and Color3.fromRGB(0,170,0) or Color3.fromRGB(80,80,80)
+		toggle.BackgroundColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(80, 80, 80)
 	end)
 end
 
 -- Sekme animasyonları
-local tweenService = game:GetService("TweenService")
 local currentIndex = 1
 
 local function selectTab(index)
@@ -219,11 +236,11 @@ local function selectTab(index)
 	for i, name in ipairs(tabNames) do
 		local btn = tabs[name]
 		btn.BackgroundColor3 = (i == index) and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(50, 50, 50)
-		btn.TextColor3 = (i == index) and Color3.new(1,1,1) or Color3.fromRGB(200,200,200)
+		btn.TextColor3 = (i == index) and Color3.new(1, 1, 1) or Color3.fromRGB(200, 200, 200)
 	end
-	
+
 	local targetPos = UDim2.new(1 - index, 0, 0, 0)
-	tweenService:Create(contentFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = targetPos}):Play()
+	TweenService:Create(contentFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = targetPos}):Play()
 	currentIndex = index
 end
 
@@ -233,26 +250,26 @@ for i, name in ipairs(tabNames) do
 	end)
 end
 
--- Başlangıçta ilk sekme seçili ve içeriği görünür olsun
+-- Başlangıçta ilk sekme seçili olsun
 selectTab(1)
 
--- Sağ CTRL ile aç/kapa
+-- Sağ CTRL ile GUI aç/kapa
 UIS.InputBegan:Connect(function(input, gameProcessed)
 	if input.KeyCode == Enum.KeyCode.RightControl and not gameProcessed then
 		frame.Visible = not frame.Visible
 	end
 end)
 
--- Frame sürükleme
+-- Frame sürükleme (manuel, sorunsuz)
 local dragging = false
-local dragInput, dragStart, startPos
+local dragStart = nil
+local startPos = nil
 
 frame.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 then
 		dragging = true
 		dragStart = input.Position
 		startPos = frame.Position
-
 		input.Changed:Connect(function()
 			if input.UserInputState == Enum.UserInputState.End then
 				dragging = false
@@ -263,18 +280,14 @@ end)
 
 frame.InputChanged:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseMovement then
-		dragInput = input
-	end
-end)
-
-UIS.InputChanged:Connect(function(input)
-	if input == dragInput and dragging then
-		local delta = input.Position - dragStart
-		frame.Position = UDim2.new(
-			startPos.X.Scale,
-			startPos.X.Offset + delta.X,
-			startPos.Y.Scale,
-			startPos.Y.Offset + delta.Y
-		)
+		if dragging then
+			local delta = input.Position - dragStart
+			frame.Position = UDim2.new(
+				math.clamp(startPos.X.Scale, 0, 1),
+				math.clamp(startPos.X.Offset + delta.X, 0, workspace.CurrentCamera.ViewportSize.X - frame.AbsoluteSize.X),
+				math.clamp(startPos.Y.Scale, 0, 1),
+				math.clamp(startPos.Y.Offset + delta.Y, 0, workspace.CurrentCamera.ViewportSize.Y - frame.AbsoluteSize.Y)
+			)
+		end
 	end
 end)
