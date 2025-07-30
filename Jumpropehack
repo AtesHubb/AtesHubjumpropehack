@@ -1,0 +1,73 @@
+-- AtesHub GUI - Sağ CTRL + Infinite Money
+local player = game.Players.LocalPlayer
+local mouse = player:GetMouse()
+local runService = game:GetService("RunService")
+
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.Name = "AtesHub"
+gui.ResetOnSpawn = false
+
+-- Frame
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 300, 0, 200)
+frame.Position = UDim2.new(0.5, -150, 0.5, -100)
+frame.AnchorPoint = Vector2.new(0.5, 0.5)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.Visible = false
+
+-- Title
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 30)
+title.BackgroundTransparency = 1
+title.Text = "🔥 AtesHub - Money Module"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+
+-- Toggle Button
+local toggle = Instance.new("TextButton", frame)
+toggle.Size = UDim2.new(0, 120, 0, 40)
+toggle.Position = UDim2.new(0.5, -60, 0.5, -20)
+toggle.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+toggle.TextColor3 = Color3.new(1, 1, 1)
+toggle.Text = "Infinite Money: OFF"
+toggle.Font = Enum.Font.Gotham
+toggle.TextSize = 14
+
+-- Toggle logic
+local isOn = false
+local loopThread = nil
+
+toggle.MouseButton1Click:Connect(function()
+	isOn = not isOn
+	toggle.Text = isOn and "Infinite Money: ON" or "Infinite Money: OFF"
+	toggle.BackgroundColor3 = isOn and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(80, 80, 80)
+
+	if isOn then
+		loopThread = task.spawn(function()
+			while isOn do
+				task.wait(1)
+				local args = { false }
+				pcall(function()
+					game:GetService("ReplicatedStorage")
+						:WaitForChild("RestartRemotes")
+						:WaitForChild("Loader")
+						:FireServer(unpack(args))
+				end)
+			end
+		end)
+	else
+		if loopThread then
+			task.cancel(loopThread)
+			loopThread = nil
+		end
+	end
+end)
+
+-- Sağ CTRL ile GUI Aç / Kapat
+local UIS = game:GetService("UserInputService")
+UIS.InputBegan:Connect(function(input, gameProcessed)
+	if input.KeyCode == Enum.KeyCode.RightControl and not gameProcessed then
+		frame.Visible = not frame.Visible
+	end
+end)
